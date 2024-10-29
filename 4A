@@ -1,0 +1,48 @@
+from machine import Pin, UART, ADC
+import time
+
+DS = Pin(20, Pin.OUT)       # Serial data input (DS)
+SHCP = Pin(18, Pin.OUT)      # Shift register clock (SHCP)
+STCP = Pin(19, Pin.OUT)      # Storage register clock (STCP)
+OE = Pin(21, Pin.OUT)        # Output Enable (OE) - active low
+Q7 = Pin(4, Pin.IN)         # Serial data output for feedback (Q7)
+
+# Defining buttons for directions
+WEST_EAST = Pin(13, Pin.IN, Pin.PULL_DOWN)
+NORTH_SOUTH = Pin(12, Pin.IN, Pin.PULL_DOWN)
+
+# Shift register function
+def shift_out_led_values(led_values):
+    """
+    Outputs the 16-bit LED values into the shift register and enables the LEDs.
+    """
+    # Ensure the list is exactly 16 bits
+    if len(led_values) != 16:
+        raise ValueError("The led_values list must contain exactly 16 values.")
+    
+    # Shift in each bit, from the highest bit to the lowest bit
+    for bit in led_values:
+        # Set DS pin according to the current bit
+        DS.value(bit)
+        
+        # Strobe SHCP (shift clock)
+        SHCP.value(1)
+        time.sleep_us(10)  # Short delay for stable clocking
+        SHCP.value(0)
+    
+    # Strobe STCP to latch the shifted values
+    STCP.value(1)
+    time.sleep_us(10)
+    STCP.value(0)
+    
+    # Enable output by setting OE low
+    OE.value(0)
+
+# Initial state: all LEDs off
+led_values = [0] * 16
+
+for i in range(16):
+    led_values[i] = 1  # Turn on the next LED
+    shift_out_led_values(led_values)  # Update LEDs
+    time.sleep(0.5)  # Delay to see each LED turn on one by one
+
